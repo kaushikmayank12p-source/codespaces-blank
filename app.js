@@ -38,9 +38,24 @@ async function fetchAPOD(date = '') {
 
     if (data.media_type === 'image' && data.url) {
       const img = document.createElement('img');
-      img.src = data.hdurl || data.url;
+      img.src = data.url;
       img.alt = data.title || 'NASA APOD image';
       img.loading = 'eager';
+      if (data.hdurl && data.hdurl !== data.url) {
+        img.addEventListener('load', () => {
+          if (img.naturalWidth > 0 && img.src === data.url) {
+            img.src = data.hdurl;
+          }
+        }, { once: true });
+      }
+      img.addEventListener('error', () => {
+        if (img.src !== data.url) {
+          img.src = data.url;
+          return;
+        }
+        mediaTitle.textContent = 'Mission Error';
+        mediaExplanation.textContent = 'The NASA image could not be displayed. Please try another date or check your connection.';
+      });
       mediaContainer.appendChild(img);
     } else if (data.media_type === 'video' && data.url) {
       const iframe = document.createElement('iframe');
@@ -58,8 +73,9 @@ async function fetchAPOD(date = '') {
     mediaDate.textContent = `Captured: ${data.date || selectedDate}`;
     mediaExplanation.textContent = data.explanation || 'No description provided for this space image.';
   } catch (err) {
+    console.error('APOD request failed:', err);
     mediaTitle.textContent = 'Mission Error';
-    mediaExplanation.textContent = 'Could not load data from NASA. Please try another date or check your connection.';
+    mediaExplanation.textContent = err.message || 'Could not load data from NASA. Please try another date or check your connection.';
   } finally {
     loader.classList.add('hidden');
     fetchBtn.disabled = false;

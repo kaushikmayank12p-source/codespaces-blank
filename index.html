@@ -2,32 +2,52 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="theme-color" content="#07111f">
       <title>Daily Space Explorer</title>
-        <link rel="stylesheet" href="style.css">
-        </head>
-        <body>
-          <div class="container">
-              <header>
-                    <h1>🌌 Daily Space Explorer</h1>
-                          <p>Discover the cosmos, one day at a time with NASA APOD</p>
-                                <div class="controls">
-                                        <label for="date-picker">Select Date:</label>
-                                                <input type="date" id="date-picker">
-                                                        <button id="fetch-btn">Explore</button>
-                                                              </div>
-                                                                  </header>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+      <link rel="stylesheet" href="style.css">
+</head>
+<body>
+      <div class="background-grid" aria-hidden="true"></div>
+      <div class="container">
+            <header class="site-header">
+                  <div class="eyebrow"><span class="status-dot"></span> NASA / ASTRONOMY PICTURE OF THE DAY</div>
+                  <div class="header-row">
+                        <div>
+                              <h1>Daily Space<br><em>Explorer</em></h1>
+                              <p class="intro">A new window into the universe, curated by NASA every day.</p>
+                        </div>
+                        <div class="orbit-mark" aria-hidden="true"><span></span></div>
+                  </div>
+                  <div class="controls" aria-label="Choose an observation date">
+                        <label for="date-picker">Explore a date</label>
+                        <div class="date-control">
+                              <input type="date" id="date-picker">
+                              <button id="fetch-btn" type="button"><span>View discovery</span><span aria-hidden="true">&#8594;</span></button>
+                        </div>
+                  </div>
+            </header>
 
-                                                                      <main id="content">
-                                                                            <div id="loader" class="hidden">Scanning the cosmos...</div>
-                                                                                  <div id="media-container"></div>
-                                                                                        <h2 id="media-title"></h2>
-                                                                                              <p id="media-date" class="date-tag"></p>
-                                                                                                    <p id="media-explanation"></p>
-                                                                                                        </main>
-                                                                                                          </div>
+            <main id="content" class="content-panel">
+                  <div id="loader" class="hidden" role="status" aria-live="polite"><span class="loader-ring"></span> Receiving signal...</div>
+                  <div id="media-container" class="media-frame"></div>
+                  <div class="story">
+                        <div class="story-meta">
+                              <span class="date-tag" id="media-date"></span>
+                              <span class="source-tag">NASA APOD</span>
+                        </div>
+                        <h2 id="media-title"></h2>
+                        <p id="media-explanation"></p>
+                  </div>
+            </main>
 
-                                                                                                            <script src="app.js"></script>
-                                                                                                            </body>
-                                                                                                            </html>
+            <footer>LOOK UP &nbsp;·&nbsp; STAY CURIOUS</footer>
+      </div>
+
+      <script src="app.js"></script>
+</body>
+</html>
                                                                                                             
