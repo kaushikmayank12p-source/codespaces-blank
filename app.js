@@ -1,11 +1,26 @@
-const datePicker = document.getElementById('date-picker');
-const fetchBtn = document.getElementById('fetch-btn');
-const loader = document.getElementById('loader');
-const mediaContainer = document.getElementById('media-container');
-const mediaTitle = document.getElementById('media-title');
-const mediaDate = document.getElementById('media-date');
-const mediaExplanation = document.getElementById('media-explanation');
+// ==========================================
+// CONFIGURATION & DOM REFERENCES
+// ==========================================
+const CONFIG = {
+  API_BASE_URL: 'https://api.nasa.gov/planetary/apod',
+  API_KEY_STORAGE_KEY: 'daily-space-explorer:nasa-api-key',
+  DEMO_API_KEY: 'DEMO_KEY',
+  REQUEST_TIMEOUT_MS: 15000
+};
 
+const DOM = {
+  datePicker: document.getElementById('date-picker'),
+  fetchBtn: document.getElementById('fetch-btn'),
+  loader: document.getElementById('loader'),
+  mediaContainer: document.getElementById('media-container'),
+  mediaTitle: document.getElementById('media-title'),
+  mediaDate: document.getElementById('media-date'),
+  mediaExplanation: document.getElementById('media-explanation')
+};
+
+// ==========================================
+// UTILITY FUNCTIONS
+// ==========================================
 function getLocalDateString(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -13,99 +28,153 @@ function getLocalDateString(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-// Set maximum date to today so users can't pick future dates
-const today = getLocalDateString();
-datePicker.max = today;
-datePicker.value = today;
-
-async function fetchAPOD(date = '') {
-  loader.classList.remove('hidden');
-  fetchBtn.disabled = true;
-  mediaContainer.innerHTML = '';
-  mediaTitle.textContent = '';
-  mediaDate.textContent = '';
-  mediaExplanation.textContent = '';
-
-  const selectedDate = date || today;
-  const url = new URL('https://api.nasa.gov/planetary/apod');
-  url.searchParams.set('api_key', 'DEMO_KEY');
-  url.searchParams.set('date', selectedDate);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
-
+function getApiKey() {
   try {
-    const res = await fetch(url, { signal: controller.signal });
-    if (!res.ok) {
-      if (res.status === 429) {
-        throw new Error('NASA is rate-limiting requests. Please wait a moment and try again.');
-      }
-      throw new Error(`NASA returned an error (${res.status}).`);
-    }
-    const data = await res.json();
-
-    if (data.media_type === 'image' && data.url) {
-      const img = document.createElement('img');
-      img.src = data.url;
-      img.alt = data.title || 'NASA APOD image';
-      img.loading = 'eager';
-      if (data.hdurl && data.hdurl !== data.url) {
-        img.addEventListener('load', () => {
-          if (img.naturalWidth > 0 && img.src === data.url) {
-            img.src = data.hdurl;
-          }
-        }, { once: true });
-      }
-      img.addEventListener('error', () => {
-        if (img.src !== data.url) {
-          img.src = data.url;
-          return;
-        }
-        mediaTitle.textContent = 'Mission Error';
-        mediaExplanation.textContent = 'The NASA image could not be displayed. Please try another date or check your connection.';
-      });
-      mediaContainer.appendChild(img);
-    } else if (data.media_type === 'video' && data.url) {
-      const iframe = document.createElement('iframe');
-      iframe.src = data.url;
-      iframe.title = data.title || 'NASA APOD video';
-      iframe.setAttribute('allowfullscreen', 'true');
-      iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
-      iframe.loading = 'lazy';
-      mediaContainer.appendChild(iframe);
-    } else {
-      throw new Error('Unsupported media type returned by the API.');
-    }
-
-    mediaTitle.textContent = data.title || 'Untitled Space Discovery';
-    mediaDate.textContent = `Captured: ${data.date || selectedDate}`;
-    mediaExplanation.textContent = data.explanation || 'No description provided for this space image.';
-  } catch (err) {
-    console.error('APOD request failed:', err);
-    mediaTitle.textContent = 'Mission Error';
-    mediaExplanation.textContent = err.name === 'AbortError'
-      ? 'NASA took too long to respond. Please check your connection and try again.'
-      : err instanceof TypeError
-        ? 'The browser could not reach NASA. Open the site through the local server at http://localhost:8000 and try again.'
-        : err.message || 'Could not load data from NASA. Please try another date or check your connection.';
-  } finally {
-    clearTimeout(timeout);
-    loader.classList.add('hidden');
-    fetchBtn.disabled = false;
+    return localStorage.getItem(CONFIG.API_KEY_STORAGE_KEY) || CONFIG.DEMO_API_KEY;
+  } catch (error) {
+    return CONFIG.DEMO_API_KEY;
   }
 }
 
-// Event listeners
-fetchBtn.addEventListener('click', () => {
-  if (datePicker.value) {
-    fetchAPOD(datePicker.value);
+function clearUI() {
+  DOM.mediaContainer.innerHTML = '';
+  DOM.mediaTitle.textContent = '';
+  DOM.mediaDate.textContent = '';
+  DOM.mediaExplanation.textContent = '';
+}
+
+function toggleLoadingState(isLoading) {
+  if (isLoading) {
+    DOM.loader.classList.remove('hidden');
+    DOM.fetchBtn.disabled = true;
+  } else {
+    DOM.loader.classList.add('hidden');
+    DOM.fetchBtn.disabled = false;
+  }
+}
+
+// ==========================================
+// CORE MEDIA RENDERING LOGIC
+// ==========================================
+function renderImage(data) {
+  const img = document.createElement('img');
+  img.src = data.url;
+  img.alt = data.title || 'NASA APOD space asset';
+  img.loading = 'eager';
+  img.className = 'media-frame img'; // Added explicit styling hooks
+
+  // Seamlessly transition to HD image upon load completion
+  if (data.hdurl && data.hdurl !== data.url) {
+    img.addEventListener('load', () => {
+      if (img.naturalWidth > 0 && img.src === data.url) {
+        img.src = data.hdurl;
+      }
+    }, { once: true });
+  }
+
+  // Gracefully catch image asset loading errors
+  img.addEventListener('error', () => {
+    if (img.src !== data.url) {
+      img.src = data.url;
+      return;
+    }
+    DOM.mediaTitle.textContent = 'Mission Error';
+    DOM.mediaExplanation.textContent = 'The specified space image failed to load. Please verify your connection or select another date.';
+  });
+
+  DOM.mediaContainer.appendChild(img);
+}
+
+function renderVideo(data) {
+  const iframe = document.createElement('iframe');
+  iframe.src = data.url;
+  iframe.title = data.title || 'NASA APOD video feature';
+  iframe.className = 'media-frame iframe'; // Added explicit styling hooks
+  iframe.loading = 'lazy';
+  iframe.setAttribute('allowfullscreen', 'true');
+  iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+  
+  DOM.mediaContainer.appendChild(iframe);
+}
+
+// ==========================================
+// API CLIENT IMPLEMENTATION
+// ==========================================
+async function fetchAPOD(date = '') {
+  toggleLoadingState(true);
+  clearUI();
+
+  const selectedDate = date || today;
+  const targetUrl = new URL(CONFIG.API_BASE_URL);
+  targetUrl.searchParams.set('api_key', getApiKey());
+  targetUrl.searchParams.set('date', selectedDate);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CONFIG.REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(targetUrl, { signal: controller.signal });
+    
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('NASA demo access is rate-limited. Add a personal NASA API key for reliable access.');
+      }
+      if (response.status === 403) {
+        throw new Error('NASA rejected this API key. Add a valid personal NASA API key and try again.');
+      }
+      throw new Error(`NASA returned an error status (${response.status}).`);
+    }
+
+    const payload = await response.json();
+
+    // Direct content type resolution
+    if (payload.media_type === 'image' && payload.url) {
+      renderImage(payload);
+    } else if (payload.media_type === 'video' && payload.url) {
+      renderVideo(payload);
+    } else {
+      throw new Error('Unsupported asset media type encountered.');
+    }
+
+    // Populate textual payload parameters safely using optional chaining
+    DOM.mediaTitle.textContent = payload?.title || 'Untitled Space Discovery';
+    DOM.mediaDate.textContent = `Captured: ${payload?.date || selectedDate}`;
+    DOM.mediaExplanation.textContent = payload?.explanation || 'No descriptive context provided for this discovery.';
+
+  } catch (error) {
+    console.error('APOD client interaction failed:', error);
+    DOM.mediaTitle.textContent = 'Mission Error';
+    
+    if (error.name === 'AbortError') {
+      DOM.mediaExplanation.textContent = 'NASA service response window timed out. Check connectivity metrics and retry.';
+    } else if (error instanceof TypeError) {
+      DOM.mediaExplanation.textContent = 'Network transport layers blocked. Ensure standard access loops target http://localhost:8000.';
+    } else {
+      DOM.mediaExplanation.textContent = error.message || 'Unable to download asset content arrays from the NASA endpoint.';
+    }
+  } finally {
+    clearTimeout(timeoutId);
+    toggleLoadingState(false);
+  }
+}
+
+// ==========================================
+// APPLICATION LIFECYCLE INITIALIZATION
+// ==========================================
+const today = getLocalDateString();
+DOM.datePicker.max = today;
+DOM.datePicker.value = today;
+
+DOM.fetchBtn.addEventListener('click', () => {
+  if (DOM.datePicker.value) fetchAPOD(DOM.datePicker.value);
+});
+
+DOM.datePicker.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && DOM.datePicker.value) {
+    fetchAPOD(DOM.datePicker.value);
   }
 });
 
-datePicker.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter' && datePicker.value) {
-    fetchAPOD(datePicker.value);
-  }
-});
-
-// Load today's photo immediately on startup
+// Run client runtime lifecycle loop on window readiness
 fetchAPOD();
+
