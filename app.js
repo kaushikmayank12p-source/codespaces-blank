@@ -30,10 +30,17 @@ async function fetchAPOD(date = '') {
   const url = new URL('https://api.nasa.gov/planetary/apod');
   url.searchParams.set('api_key', 'DEMO_KEY');
   url.searchParams.set('date', selectedDate);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
 
   try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('Failed to retrieve space data.');
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) {
+      if (res.status === 429) {
+        throw new Error('NASA is rate-limiting requests. Please wait a moment and try again.');
+      }
+      throw new Error(`NASA returned an error (${res.status}).`);
+    }
     const data = await res.json();
 
     if (data.media_type === 'image' && data.url) {
@@ -75,8 +82,13 @@ async function fetchAPOD(date = '') {
   } catch (err) {
     console.error('APOD request failed:', err);
     mediaTitle.textContent = 'Mission Error';
-    mediaExplanation.textContent = err.message || 'Could not load data from NASA. Please try another date or check your connection.';
+    mediaExplanation.textContent = err.name === 'AbortError'
+      ? 'NASA took too long to respond. Please check your connection and try again.'
+      : err instanceof TypeError
+        ? 'The browser could not reach NASA. Open the site through the local server at http://localhost:8000 and try again.'
+        : err.message || 'Could not load data from NASA. Please try another date or check your connection.';
   } finally {
+    clearTimeout(timeout);
     loader.classList.add('hidden');
     fetchBtn.disabled = false;
   }
