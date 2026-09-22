@@ -9,7 +9,7 @@ const mediaExplanation = document.getElementById('media-explanation');
 // Set maximum date to today so users can't pick future dates
 const today = new Date().toISOString().split('T')[0];
 datePicker.max = today;
-datePicker.value = today;hackatim
+datePicker.value = today;
 async function fetchAPOD(date = '') {
   loader.classList.remove('hidden');
   mediaContainer.innerHTML = '';
