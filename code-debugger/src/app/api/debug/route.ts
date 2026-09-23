@@ -1,89 +1,65 @@
 import { NextResponse } from 'next/server';
+import { GoogleGenAI } from '@google/genai';
 
 export async function POST(req: Request) {
   try {
-    const { code, language } = await req.json();
+    const { code, language, instruction } = await req.json();
 
-    if (!code) {
-      return NextResponse.json({ error: 'Code is required' }, { status: 400 });
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'GEMINI_API_KEY is not configured.' },
+        { status: 500 }
+      );
     }
 
-    let fixedCode = code;
-    const issues: string[] = [];
+    const ai = new GoogleGenAI({ apiKey });
 
-    if (language === 'java') {
-      const lines = fixedCode.split('\n');
-      const fixedLines = lines.map((line: string) => {
-        const trimmed = line.trim();
-        if (
-          (trimmed.startsWith('int ') ||
-            trimmed.startsWith('double ') ||
-            trimmed.startsWith('String ') ||
-            trimmed.startsWith('result =')) &&
-          !trimmed.endsWith(';') &&
-          !trimmed.endsWith('{') &&
-          !trimmed.endsWith('}') &&
-          trimmed.length > 0
-        ) {
-          issues.push('Missing semicolon added');
-          return line + ';';
-        }
-        return line;
-      });
-      fixedCode = fixedLines.join('\n');
+    const systemPrompt = `You are a supportive, sharp Principal Software Engineer and developer companion inside DebugCraft Studio.
+You have two operational modes based on user intent:
 
-      if (fixedCode.includes('== "+"')) {
-        fixedCode = fixedCode.replace(/([a-zA-Z0-9_]+)\s*==\s*"([^"]+)"/g, '$1.equals("$2")');
-        issues.push('Changed `==` string comparison to `.equals()`');
-      }
+1. CONVERSATIONAL / CHAT MODE (e.g., greetings like "hi", "hello", "hey", questions about how you work, jokes, or general coding questions):
+- Respond in a warm, authentic, natural human developer voice.
+- Keep "fixedCode" identical to the provided input code.
+- In "diagnosis", write your conversational reply directly (no bullet points required).
 
-      if (fixedCode.includes('String operator = null;')) {
-        fixedCode = fixedCode.replace(
-          'String operator = null;',
-          'String operator = scanner.next();'
-        );
-        issues.push('Replaced null operator initialization with scanner input read');
-      }
+2. CODE DEBUG / ANALYSIS MODE (e.g., "debug this", code review, or finding bugs):
+- Analyze the code thoroughly for logic bugs, runtime panics, boundary issues, and syntax errors.
+- Return the fully cleaned, repaired code in "fixedCode".
+- In "diagnosis", explain the bugs found and how they were resolved with clear, concise bullet points.
 
-      if (fixedCode.includes('/ 0')) {
-        fixedCode = fixedCode.replace(
-          /result\s*=\s*([a-zA-Z0-9_]+)\s*\/\s*0\s*;/g,
-          'result = (num2 != 0) ? ($1 / num2) : 0;'
-        );
-        issues.push('Guarded against ArithmeticException (Division by zero)');
-      }
+CRITICAL: Return ONLY a valid JSON object matching this schema without markdown fences:
+{
+  "fixedCode": "the resulting code string",
+  "diagnosis": "your natural response or diagnosis text"
+}`;
 
-      if (fixedCode.includes('<= numbers.length')) {
-        fixedCode = fixedCode.replace('<= numbers.length', '< numbers.length');
-        issues.push('Corrected array boundary off-by-one condition');
-      }
-    } else if (language === 'c') {
-      if (fixedCode.includes('%f') && fixedCode.includes('int count')) {
-        fixedCode = fixedCode.replace('%f', '%d');
-        issues.push('Corrected printf format specifier to %d');
-      }
-      const lines = fixedCode.split('\n');
-      fixedCode = lines
-        .map((l: string) => {
-          if (l.trim().startsWith('int count = 10') && !l.trim().endsWith(';')) {
-            issues.push('Terminated statement with semicolon');
-            return l + ';';
-          }
-          return l;
-        })
-        .join('\n');
-    } else {
-      fixedCode = fixedCode.replace(/<div>\s*<p>/g, '<div><p>').replace(/<\/div>\s*<\/p>/g, '</p></div>');
-      issues.push('Balanced improperly nested markup tags');
-    }
+    const userPrompt = `Language preset: ${language || 'plaintext'}
+User message / Instruction: ${instruction || 'Analyze this code.'}
 
-    const diagnosis =
-      issues.length > 0
-        ? issues.map((i) => `• ${i}`).join('\n')
-        : '• Code structure and syntax verified clean.';
+Current Editor Code:
+${code || ''}`;
 
-    return NextResponse.json({ fixedCode, diagnosis });
-  } catch {
-    return NextResponse.json({ error: 'Failed to process code' }, { status: 500 });
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: userPrompt,
+      config: {
+        systemInstruction: systemPrompt,
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const parsedData = JSON.parse(response.text || '{}');
+
+    return NextResponse.json({
+      fixedCode: parsedData.fixedCode ?? code ?? '',
+      diagnosis: parsedData.diagnosis || 'I am here and ready to help you write and debug code.',
+    });
+  } catch (error: any) {
+    console.error('AI Route Error:', error);
+    return NextResponse.json(
+      { error: error?.message || 'Failed to process request.' },
+      { status: 500 }
+    );
   }
 }
