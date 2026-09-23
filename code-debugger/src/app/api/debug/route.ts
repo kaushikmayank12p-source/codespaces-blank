@@ -1,111 +1,97 @@
 import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
+
+// Server-side key definition
+const OPENROUTER_API_KEY: string =
+  process.env.OPENROUTER_API_KEY ||
+  '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';
+
+interface DebugRequestBody {
+  code?: string;
+  language?: string;
+  instruction?: string;
+}
+
+interface DebugResponseBody {
+  fixedCode: string;
+  diagnosis: string;
+}
 
 export async function POST(req: Request) {
   try {
-    const { code, language, instruction } = await req.json();
-    const query = (instruction || '').trim().toLowerCase();
+    const body: DebugRequestBody = await req.json();
+    const { code = '', language = 'java', instruction = '' } = body;
+    const cleanInstruction = instruction.trim().toLowerCase();
 
-    // 1. Detect Conversational Greetings & Casual Questions
+    // 1. Instant fallback for common conversational greetings
     const greetings = ['hi', 'hello', 'hey', 'hu', 'yo', 'sup', 'who are you', 'help'];
-    const isGreeting = greetings.some((g) => query === g || query.startsWith(g + ' '));
-
-    if (isGreeting) {
-      return NextResponse.json({
-        fixedCode: code || '',
+    if (greetings.some((g) => cleanInstruction === g || cleanInstruction.startsWith(g + ' '))) {
+      return NextResponse.json<DebugResponseBody>({
+        fixedCode: code,
         diagnosis:
-          "Hey there! 👋 I'm your developer copilot. Paste any code into the middle editor and hit **Debug & Fix**, or ask me anything about your logic and syntax.",
+          "Hey! 👋 I'm your developer copilot. Paste any code in the editor, ask me questions about syntax, or click **Debug & Fix** to resolve issues.",
       });
     }
 
-    // 2. Developer Code Repair Engine
-    let fixedCode = code || '';
-    const issues: string[] = [];
+    // 2. Initialize the OpenRouter client
+    const client = new OpenAI({
+      baseURL: 'https://openrouter.ai/api/v1',
+      apiKey: OPENROUTER_API_KEY,
+      defaultHeaders: {
+        'HTTP-Referer': 'https://code-debugger-smoky.vercel.app',
+        'X-Title': 'DebugCraft Studio',
+      },
+    });
 
-    if (language === 'java') {
-      // Fix uninitialized operator (Bug 1)
-      if (fixedCode.includes('String operator = null;')) {
-        fixedCode = fixedCode.replace(
-          'String operator = null;',
-          'String operator = scanner.next();'
-        );
-        issues.push('**NullPointerException**: Initialized `operator` with `scanner.next()` instead of null.');
-      }
+    const systemPrompt = `You are a Principal Software Engineer and developer copilot.
+Analyze code and developer instructions accurately.
 
-      // Fix string reference equality == to .equals() (Bug 2)
-      if (fixedCode.includes('== "+"')) {
-        fixedCode = fixedCode.replace(/operator\s*==\s*"([^"]+)"/g, 'operator.equals("$1")');
-        issues.push('**String Equality**: Changed `operator == "..."` to `operator.equals("...")`. In Java, `==` tests reference equality rather than string values.');
-      }
+MODES:
+1. CASUAL / GREETING MODE:
+   - Leave "fixedCode" identical to the provided input code.
+   - Reply warmly and directly in "diagnosis".
 
-      // Fix missing semicolons on lines (Bug 3)
-      const lines = fixedCode.split('\n');
-      const fixedLines = lines.map((line: string) => {
-        const trimmed = line.trim();
-        if (
-          (trimmed.startsWith('result =') ||
-            trimmed.startsWith('int ') ||
-            trimmed.startsWith('double ')) &&
-          !trimmed.endsWith(';') &&
-          !trimmed.endsWith('{') &&
-          !trimmed.endsWith('}') &&
-          trimmed.length > 0
-        ) {
-          issues.push('**Syntax Error**: Added missing terminating semicolon `;` to statement.');
-          return line + ';';
-        }
-        return line;
-      });
-      fixedCode = fixedLines.join('\n');
+2. DEBUG / CODE FIX MODE:
+   - Analyze the code for logic bugs, runtime exceptions, syntax errors, and edge cases.
+   - Provide the complete, clean, repaired code in "fixedCode".
+   - In "diagnosis", detail every fix in concise bullet points.
 
-      // Fix division by zero (Bug 4)
-      if (fixedCode.includes('/ 0')) {
-        fixedCode = fixedCode.replace(
-          /result\s*=\s*([a-zA-Z0-9_]+)\s*\/\s*0\s*;/g,
-          'result = (num2 != 0) ? ($1 / num2) : 0;'
-        );
-        issues.push('**ArithmeticException**: Replaced divide-by-zero with a safe check `(num2 != 0) ? (num1 / num2) : 0`.');
-      }
+CRITICAL: Return strictly a valid JSON object matching this schema with no markdown wrapping:
+{
+  "fixedCode": "the complete cleaned code string",
+  "diagnosis": "conversational reply or bug diagnosis"
+}`;
 
-      // Fix off-by-one array boundary
-      if (fixedCode.includes('<= numbers.length')) {
-        fixedCode = fixedCode.replace('<= numbers.length', '< numbers.length');
-        issues.push('**IndexOutOfBoundsException**: Corrected array loop boundary from `<=` to `<`.');
-      }
-    } else if (language === 'c') {
-      if (fixedCode.includes('%f') && fixedCode.includes('int count')) {
-        fixedCode = fixedCode.replace('%f', '%d');
-        issues.push('**Format Mismatch**: Corrected `printf` format specifier to `%d` for integer type.');
-      }
-      const lines = fixedCode.split('\n');
-      fixedCode = lines
-        .map((l: string) => {
-          if (l.trim().startsWith('int count = 10') && !l.trim().endsWith(';')) {
-            issues.push('**Syntax Error**: Added missing semicolon to declaration.');
-            return l + ';';
-          }
-          return l;
-        })
-        .join('\n');
-    } else {
-      fixedCode = fixedCode
-        .replace(/<div>\s*<p>/g, '<div><p>')
-        .replace(/<\/div>\s*<\/p>/g, '</p></div>');
-      issues.push('**DOM Validity**: Fixed improperly nested markup tags.');
-    }
+    const userPrompt = `Language: ${language}
+Instruction: ${instruction || 'Debug and repair all issues in this code.'}
 
-    const diagnosis =
-      issues.length > 0
-        ? issues.map((i) => `• ${i}`).join('\n')
-        : 'All syntax checks and boundary logic verified clean.';
+Code:
+${code}`;
 
-    return NextResponse.json({
-      fixedCode,
-      diagnosis,
+    const completion = await client.chat.completions.create({
+      model: 'meta-llama/llama-3.3-70b-instruct:free',
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      temperature: 0.2,
+    });
+
+    const content = completion.choices[0]?.message?.content || '{}';
+    const parsedData: DebugResponseBody = JSON.parse(content);
+
+    return NextResponse.json<DebugResponseBody>({
+      fixedCode: parsedData.fixedCode ?? code,
+      diagnosis: parsedData.diagnosis ?? 'Code review complete.',
     });
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to process request.' },
-      { status: 500 }
-    );
+    console.error('Debug API Route Error:', error);
+
+    // Fallback if the free external route is unavailable or throttled
+    return NextResponse.json<DebugResponseBody>({
+      fixedCode: (await req.clone().json()).code || '',
+      diagnosis: `Engine Notice: ${error?.message || 'Connection error. Please try again.'}`,
+    });
   }
 }
