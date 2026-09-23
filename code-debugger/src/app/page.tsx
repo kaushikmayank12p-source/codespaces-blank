@@ -6,18 +6,14 @@ import {
   Sparkles,
   ArrowUp,
   Bot,
-  User,
   Copy,
   Check,
-  Code2,
   GitCompare,
-  Terminal,
   PanelLeftClose,
   PanelLeft,
   RotateCcw,
   CheckCircle2,
   FileCode2,
-  AlertCircle
 } from 'lucide-react';
 import { SUPPORTED_LANGUAGES, STARTER_CODE, SupportedLanguage } from '@/lib/constants';
 
@@ -43,7 +39,7 @@ export default function ThreeColumnDebuggerPage() {
       id: '1',
       role: 'assistant',
       content:
-        'Welcome! Paste your buggy code in the middle panel. When you click "Debug & Fix", the corrected production-ready version will populate instantly on the right.',
+        'Welcome! Paste your code into the center editor and hit "Debug & Fix" to see the clean output and diagnosis.',
       timestamp: 'Just now',
     },
   ]);
@@ -68,7 +64,7 @@ export default function ThreeColumnDebuggerPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const executeDebug = (userPrompt?: string) => {
+  const executeDebug = async (userPrompt?: string) => {
     const query = userPrompt || prompt || 'Analyze and resolve all bugs in this code.';
     if (isProcessing) return;
 
@@ -83,61 +79,43 @@ export default function ThreeColumnDebuggerPage() {
     setPrompt('');
     setIsProcessing(true);
 
-    // Simulated robust fix for demo/testing
-    setTimeout(() => {
-      let resolved = inputCode;
-      let diagnosis = '';
+    try {
+      const res = await fetch('/api/debug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: inputCode, language }),
+      });
 
-      if (language === 'java') {
-        resolved = `public class BuggyApp {
-    public static void main(String[] args) {
-        // Fix 1: Null check / safe initialization
-        String username = "DefaultUser";
-        System.out.println("User length: " + username.length());
+      const data = await res.json();
 
-        // Fix 2: Off-by-one boundary guard (i < length)
-        int[] numbers = {10, 20, 30, 40, 50};
-        for (int i = 0; i < numbers.length; i++) {
-            System.out.println("Item: " + numbers[i]);
-        }
+      if (data.fixedCode) {
+        setFixedCode(data.fixedCode);
 
-        // Fix 3: Divisor validation before calculation
-        int dividend = 100;
-        int divisor = 2; // Fixed zero division
-        int result = dividend / divisor;
-        System.out.println("Result: " + result);
+        const assistantMsg: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `I've analyzed your **${language.toUpperCase()}** code and fixed the bugs.\n\n### Diagnosis:\n${data.diagnosis}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
 
-        // Fix 4: Added missing semicolon
-        int totalScore = 95;
-        System.out.println("Total: " + totalScore);
-    }
-}`;
-        diagnosis = `• **NullPointerException**: Initialized string before dereferencing.\n• **ArrayIndexOutOfBoundsException**: Changed loop predicate to \`i < numbers.length\`.\n• **ArithmeticException**: Handled zero denominator.\n• **Syntax**: Added missing semicolon on line 21.`;
-      } else if (language === 'c') {
-        resolved = `#include <stdio.h>\n\nint main() {\n    int count = 10;\n    printf("Count is: %d\\n", count);\n    return 0;\n}`;
-        diagnosis = `• **Semicolon Added**: Line 5 terminated with \`;\`.\n• **Format Specifier**: Fixed \`%f\` to \`%d\` for integer output.`;
-      } else {
-        resolved = inputCode.replace(/<div>\s*<p>/g, '<div><p>').replace(/<\/div>\s*<\/p>/g, '</p></div>');
-        diagnosis = `• **Nesting Fixed**: Balanced tags and matched structure.`;
+        setMessages((prev) => [...prev, assistantMsg]);
       }
-
-      setFixedCode(resolved);
-
-      const assistantMsg: Message = {
+    } catch {
+      const errMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `I have fixed your **${language.toUpperCase()}** code. The clean output is ready on the right.\n\n### Diagnosis:\n${diagnosis}`,
+        content: 'Could not reach the debugging engine. Please try again.',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
-
-      setMessages((prev) => [...prev, assistantMsg]);
+      setMessages((prev) => [...prev, errMsg]);
+    } finally {
       setIsProcessing(false);
-    }, 900);
+    }
   };
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#0b0f17] text-slate-100 font-sans antialiased overflow-hidden">
-      {/* ── Top Bar ─────────────────────────────────────────────── */}
+      {/* Top Bar */}
       <header className="h-14 border-b border-slate-800/80 bg-[#111827]/80 backdrop-blur-md px-5 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-fuchsia-500 p-[1px] shadow-lg shadow-indigo-500/20">
@@ -197,15 +175,14 @@ export default function ThreeColumnDebuggerPage() {
         </div>
       </header>
 
-      {/* ── 3-Column Main Workspace ───────────────────────────────── */}
+      {/* Main 3-Column Workspace */}
       <div className="flex-1 flex min-h-0 divide-x divide-slate-800/80">
-        {/* Column 1: AI Chat Assistant (Collapsible) */}
+        {/* Column 1: AI Chat Assistant */}
         <div
           className={`${
             sidebarOpen ? 'w-80 xl:w-96' : 'w-12'
           } transition-all duration-300 ease-in-out bg-[#0d131f] flex flex-col h-full shrink-0 relative`}
         >
-          {/* Header */}
           <div className="h-10 px-3 border-b border-slate-800/80 flex items-center justify-between bg-slate-900/40">
             {sidebarOpen ? (
               <>
@@ -232,7 +209,6 @@ export default function ThreeColumnDebuggerPage() {
             )}
           </div>
 
-          {/* Messages */}
           {sidebarOpen && (
             <>
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -269,7 +245,6 @@ export default function ThreeColumnDebuggerPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Chat Input */}
               <div className="p-3 border-t border-slate-800/80 bg-slate-900/40">
                 <form
                   onSubmit={(e) => {
@@ -364,7 +339,6 @@ export default function ThreeColumnDebuggerPage() {
               )}
             </div>
 
-            {/* Prominent Copy Button */}
             <button
               onClick={() => handleCopy(fixedCode)}
               disabled={!fixedCode}
@@ -387,7 +361,7 @@ export default function ThreeColumnDebuggerPage() {
                 </div>
                 <p className="text-sm font-semibold text-slate-300">Clean Output Column</p>
                 <p className="text-xs text-slate-500 max-w-xs mt-1 leading-relaxed">
-                  Click <span className="text-indigo-400 font-medium">"Debug & Fix"</span> above. Your verified, bug-free code will appear directly in this column.
+                  Click <span className="text-indigo-400 font-medium">"Debug & Fix"</span> above to test code repairs.
                 </p>
               </div>
             ) : showDiff ? (
@@ -401,7 +375,7 @@ export default function ThreeColumnDebuggerPage() {
                   readOnly: true,
                   minimap: { enabled: false },
                   fontSize: 13,
-                  renderSideBySide: false, // inline diff fits great in 3-column
+                  renderSideBySide: false,
                   automaticLayout: true,
                   padding: { top: 12 },
                 }}
