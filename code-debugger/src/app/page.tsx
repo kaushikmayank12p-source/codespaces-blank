@@ -1,21 +1,22 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import Editor, { DiffEditor } from '@monaco-editor/react';
-import {
-  Sparkles,
-  ArrowUp,
-  Bot,
+import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
+import { 
+  Play, 
+  Send, 
+  Sparkles, 
+  Code2, 
+  Terminal, 
+  Bot, 
+  User, 
+  CheckCircle2, 
+  RefreshCw,
   Copy,
-  Check,
-  GitCompare,
-  PanelLeftClose,
-  PanelLeft,
-  RotateCcw,
-  CheckCircle2,
-  FileCode2,
+  Check
 } from 'lucide-react';
-import { SUPPORTED_LANGUAGES, STARTER_CODE, SupportedLanguage } from '@/lib/constants';
+
+const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 
 interface Message {
   id: string;
@@ -24,42 +25,59 @@ interface Message {
   timestamp: string;
 }
 
-export default function ThreeColumnDebuggerPage() {
-  const [language, setLanguage] = useState<SupportedLanguage>('java');
-  const [inputCode, setInputCode] = useState<string>(STARTER_CODE['java'] || '');
-  const [fixedCode, setFixedCode] = useState<string>('');
-  const [showDiff, setShowDiff] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+const DEFAULT_JAVA_CODE = `import java.util.Scanner;
+
+public class BuggyCalculator {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
+        System.out.print("Enter first number: ");
+        double num1 = scanner.nextDouble();
+
+        System.out.print("Enter operator (+, -, *, /): ");
+        String operator = null;
+
+        System.out.print("Enter second number: ");
+        double num2 = scanner.nextDouble();
+
+        double result = 0;
+
+        if (operator == "+") {
+            result = num1 + num2;
+        } else if (operator == "-") {
+            result = num1 - num2;
+        } else if (operator == "*") {
+            result = num1 * num2
+        } else if (operator == "/") {
+            result = num1 / 0;
+        } else {
+            System.out.println("Invalid operator!");
+        }
+
+        System.out.println("Result: " + result);
+    }
+}`;
+
+export default function DebugCraftStudio() {
+  const [language, setLanguage] = useState('java');
+  const [inputCode, setInputCode] = useState(DEFAULT_JAVA_CODE);
+  const [fixedCode, setFixedCode] = useState('');
   const [prompt, setPrompt] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: '1',
+      id: 'welcome',
       role: 'assistant',
-      content:
-        'Welcome! Paste your code into the center editor and hit "Debug & Fix" to see the clean output and diagnosis.',
-      timestamp: 'Just now',
+      content: "👋 **Welcome to DebugCraft Studio!** 🚀\n\nI'm your Principal Software Engineer copilot. Drop buggy code into the center editor, ask any questions here, or hit **⚡ Run Debug Engine** to auto-fix and diagnose logic bugs.",
+      timestamp: 'Ready',
     },
   ]);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const handleLanguageChange = (lang: SupportedLanguage) => {
-    setLanguage(lang);
-    setInputCode(STARTER_CODE[lang]);
-    setFixedCode('');
-    setShowDiff(false);
-  };
-
-  const handleCopy = (codeToCopy: string) => {
-    if (!codeToCopy) return;
-    navigator.clipboard.writeText(codeToCopy);
+  const copyToClipboard = () => {
+    if (!fixedCode) return;
+    navigator.clipboard.writeText(fixedCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -83,28 +101,36 @@ export default function ThreeColumnDebuggerPage() {
       const res = await fetch('/api/debug', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: inputCode, language }),
+        body: JSON.stringify({
+          code: inputCode,
+          language,
+          instruction: query,
+        }),
       });
 
       const data = await res.json();
 
-      if (data.fixedCode) {
-        setFixedCode(data.fixedCode);
-
-        const assistantMsg: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: `I've analyzed your **${language.toUpperCase()}** code and fixed the bugs.\n\n### Diagnosis:\n${data.diagnosis}`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        };
-
-        setMessages((prev) => [...prev, assistantMsg]);
+      if (data.error) {
+        throw new Error(data.error);
       }
-    } catch {
+
+      if (data.fixedCode !== undefined) {
+        setFixedCode(data.fixedCode);
+      }
+
+      const assistantMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.diagnosis || '✅ All checks passed! No issues detected.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+
+      setMessages((prev) => [...prev, assistantMsg]);
+    } catch (err: any) {
       const errMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Could not reach the debugging engine. Please try again.',
+        content: `⚠️ **Engineer Alert**: ${err.message || 'Unable to connect to AI debugging pipeline.'}`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, errMsg]);
@@ -114,293 +140,205 @@ export default function ThreeColumnDebuggerPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#0b0f17] text-slate-100 font-sans antialiased overflow-hidden">
-      {/* Top Bar */}
-      <header className="h-14 border-b border-slate-800/80 bg-[#111827]/80 backdrop-blur-md px-5 flex items-center justify-between shrink-0">
+    <div className="flex flex-col h-screen bg-[#0d1117] text-slate-100 font-sans overflow-hidden">
+      {/* Top Navigation Bar */}
+      <header className="h-14 border-b border-slate-800 bg-[#161b22] px-6 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-fuchsia-500 p-[1px] shadow-lg shadow-indigo-500/20">
-            <div className="w-full h-full bg-slate-950 rounded-[11px] flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-cyan-400" />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-sm font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-              DebugCraft Studio
-            </h1>
-            <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-              Live AI
-            </span>
-          </div>
+          <span className="text-2xl">🛠️</span>
+          <h1 className="font-bold text-lg tracking-wide bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
+            DebugCraft Studio
+          </h1>
+          <span className="text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-mono">
+            v2.0 ⚡
+          </span>
         </div>
 
-        {/* Language Pills */}
-        <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
-          {SUPPORTED_LANGUAGES.map((l) => (
-            <button
-              key={l.value}
-              onClick={() => handleLanguageChange(l.value)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                language === l.value
-                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-              }`}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 bg-[#0d1117] border border-slate-700 px-3 py-1.5 rounded-lg">
+            <span className="text-sm">🌐</span>
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="bg-transparent text-xs text-slate-200 focus:outline-none cursor-pointer"
             >
-              {l.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Action Controls */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setInputCode(STARTER_CODE[language]);
-              setFixedCode('');
-              setShowDiff(false);
-            }}
-            title="Reset code"
-            className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent hover:border-slate-700 transition"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
+              <option value="java">☕ Java</option>
+              <option value="python">🐍 Python</option>
+              <option value="javascript">📜 JavaScript</option>
+              <option value="typescript">🔷 TypeScript</option>
+              <option value="c">⚙️ C</option>
+              <option value="cpp">🚀 C++</option>
+            </select>
+          </div>
 
           <button
             onClick={() => executeDebug()}
             disabled={isProcessing}
-            className="relative flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-cyan-500 via-indigo-600 to-fuchsia-600 hover:opacity-95 shadow-md shadow-indigo-500/25 disabled:opacity-50 transition"
+            className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow transition active:scale-95 cursor-pointer"
           >
-            <Sparkles className={`w-3.5 h-3.5 ${isProcessing ? 'animate-spin' : ''}`} />
-            <span>{isProcessing ? 'Analyzing...' : 'Debug & Fix'}</span>
+            {isProcessing ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span>Diagnosing... 🧠</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Run Debug Engine ⚡</span>
+              </>
+            )}
           </button>
         </div>
       </header>
 
-      {/* Main 3-Column Workspace */}
-      <div className="flex-1 flex min-h-0 divide-x divide-slate-800/80">
-        {/* Column 1: AI Chat Assistant */}
-        <div
-          className={`${
-            sidebarOpen ? 'w-80 xl:w-96' : 'w-12'
-          } transition-all duration-300 ease-in-out bg-[#0d131f] flex flex-col h-full shrink-0 relative`}
-        >
-          <div className="h-10 px-3 border-b border-slate-800/80 flex items-center justify-between bg-slate-900/40">
-            {sidebarOpen ? (
-              <>
-                <div className="flex items-center gap-2">
-                  <Bot className="w-4 h-4 text-indigo-400" />
-                  <span className="text-xs font-semibold text-slate-300">Debugger Copilot</span>
-                </div>
-                <button
-                  onClick={() => setSidebarOpen(false)}
-                  className="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                  title="Collapse chat"
-                >
-                  <PanelLeftClose className="w-3.5 h-3.5" />
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="w-full flex justify-center py-2 text-slate-400 hover:text-slate-200"
-                title="Expand chat"
-              >
-                <PanelLeft className="w-4 h-4" />
-              </button>
-            )}
+      {/* Main 3-Column Responsive Grid */}
+      <main className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-0 overflow-hidden divide-y md:divide-y-0 md:divide-x divide-slate-800">
+        
+        {/* Column 1: AI Chat & Reasoning Panel (3 cols) */}
+        <section className="col-span-12 md:col-span-3 flex flex-col bg-[#161b22]/70 h-full overflow-hidden">
+          <div className="p-3 border-b border-slate-800 flex items-center gap-2 bg-[#161b22]">
+            <Bot className="w-4 h-4 text-purple-400" />
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              Copilot Chat & Diagnosis 💬
+            </h2>
           </div>
 
-          {sidebarOpen && (
-            <>
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map((m) => (
-                  <div
-                    key={m.id}
-                    className={`flex gap-2.5 text-xs leading-relaxed ${
-                      m.role === 'user' ? 'justify-end' : 'justify-start'
-                    }`}
-                  >
-                    {m.role === 'assistant' && (
-                      <div className="w-5 h-5 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
-                        <Sparkles className="w-3 h-3" />
-                      </div>
-                    )}
-                    <div
-                      className={`rounded-2xl px-3.5 py-2.5 max-w-[85%] ${
-                        m.role === 'user'
-                          ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-tr-none shadow-sm'
-                          : 'bg-[#151c2c] border border-slate-800 text-slate-300 rounded-tl-none space-y-1.5'
-                      }`}
-                    >
-                      <div className="whitespace-pre-wrap">{m.content}</div>
-                      <div className="text-[9px] text-slate-500 text-right">{m.timestamp}</div>
-                    </div>
-                  </div>
-                ))}
-                {isProcessing && (
-                  <div className="flex items-center gap-2 text-indigo-400 text-xs py-1">
-                    <Sparkles className="w-3.5 h-3.5 animate-spin" />
-                    <span>Resolving syntax & runtime logic...</span>
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {messages.map((m) => (
+              <div
+                key={m.id}
+                className={`flex gap-3 text-xs leading-relaxed ${
+                  m.role === 'user' ? 'justify-end' : 'justify-start'
+                }`}
+              >
+                {m.role === 'assistant' && (
+                  <div className="w-7 h-7 rounded-full bg-purple-600/20 border border-purple-500/40 flex items-center justify-center shrink-0">
+                    🤖
                   </div>
                 )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              <div className="p-3 border-t border-slate-800/80 bg-slate-900/40">
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (prompt.trim()) executeDebug();
-                  }}
-                  className="rounded-xl bg-[#151c2c] border border-slate-700/80 focus-within:border-indigo-500 p-2 flex flex-col gap-2"
+                <div
+                  className={`p-3 rounded-xl max-w-[85%] whitespace-pre-wrap ${
+                    m.role === 'user'
+                      ? 'bg-indigo-600 text-white rounded-br-none shadow-sm'
+                      : 'bg-[#21262d] text-slate-200 border border-slate-700/60 rounded-bl-none shadow-inner'
+                  }`}
                 >
-                  <textarea
-                    rows={2}
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Ask about an error or request changes..."
-                    className="w-full bg-transparent resize-none outline-none text-xs text-slate-200 placeholder-slate-500"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        if (prompt.trim()) executeDebug();
-                      }
-                    }}
-                  />
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-slate-500">Enter to send</span>
-                    <button
-                      type="submit"
-                      disabled={isProcessing || !prompt.trim()}
-                      className="p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white disabled:bg-slate-800 disabled:text-slate-600 transition"
-                    >
-                      <ArrowUp className="w-3.5 h-3.5" />
-                    </button>
+                  {m.content}
+                  <div className="mt-1 text-[10px] opacity-40 text-right">{m.timestamp}</div>
+                </div>
+                {m.role === 'user' && (
+                  <div className="w-7 h-7 rounded-full bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center shrink-0">
+                    👨‍💻
                   </div>
-                </form>
+                )}
               </div>
-            </>
-          )}
-        </div>
+            ))}
+          </div>
 
-        {/* Column 2: Source Code Editor */}
-        <div className="flex-1 flex flex-col min-w-0 bg-[#0b0f17]">
-          <div className="h-10 px-4 border-b border-slate-800/80 bg-slate-900/30 flex items-center justify-between">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (prompt.trim()) executeDebug(prompt);
+            }}
+            className="p-3 border-t border-slate-800 bg-[#161b22] flex gap-2"
+          >
+            <input
+              type="text"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Ask a question or type 'hi'... 💭"
+              className="flex-1 bg-[#0d1117] border border-slate-700 px-3 py-2 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+            />
+            <button
+              type="submit"
+              disabled={isProcessing}
+              className="bg-indigo-600 hover:bg-indigo-500 p-2 rounded-lg text-white disabled:opacity-50 transition"
+            >
+              <Send className="w-3.5 h-3.5" />
+            </button>
+          </form>
+        </section>
+
+        {/* Column 2: Active Input Editor (5 cols) */}
+        <section className="col-span-12 md:col-span-5 flex flex-col bg-[#0d1117] h-full overflow-hidden">
+          <div className="p-3 border-b border-slate-800 flex items-center justify-between bg-[#161b22]">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[11px] font-mono font-medium">
-                SOURCE
-              </span>
-              <span className="text-xs text-slate-400 font-medium capitalize">{language} Input</span>
+              <Code2 className="w-4 h-4 text-blue-400" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                Source Code Editor ✍️
+              </h2>
             </div>
-            <span className="text-[11px] font-mono text-slate-500">
-              {inputCode.split('\n').length} lines
+            <span className="text-[11px] text-amber-400/80 font-mono bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+              Input Area 📝
             </span>
           </div>
 
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 overflow-hidden">
             <Editor
               height="100%"
-              theme="vs-dark"
               language={language}
+              theme="vs-dark"
               value={inputCode}
               onChange={(val) => setInputCode(val || '')}
               options={{
                 minimap: { enabled: false },
                 fontSize: 13,
-                fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                lineNumbers: 'on',
+                wordWrap: 'on',
                 scrollBeyondLastLine: false,
-                automaticLayout: true,
-                padding: { top: 12 },
+                lineNumbers: 'on',
+                renderWhitespace: 'none',
               }}
             />
           </div>
-        </div>
+        </section>
 
-        {/* Column 3: Dedicated Final Output Column */}
-        <div className="flex-1 flex flex-col min-w-0 bg-[#0d131f] border-l border-slate-800/80">
-          <div className="h-10 px-4 border-b border-slate-800/80 bg-slate-900/50 flex items-center justify-between">
+        {/* Column 3: Fixed Clean Output Column (4 cols) */}
+        <section className="col-span-12 md:col-span-4 flex flex-col bg-[#0d1117] h-full overflow-hidden">
+          <div className="p-3 border-b border-slate-800 flex items-center justify-between bg-[#161b22]">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-mono font-medium flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" />
-                CORRECTED OUTPUT
-              </span>
-              {fixedCode && (
-                <button
-                  onClick={() => setShowDiff(!showDiff)}
-                  className={`text-[11px] px-2 py-0.5 rounded border transition flex items-center gap-1 ${
-                    showDiff
-                      ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300'
-                      : 'border-slate-700 text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <GitCompare className="w-3 h-3" />
-                  {showDiff ? 'Show Clean Code' : 'Show Diff'}
-                </button>
-              )}
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                Resolved Output ✨
+              </h2>
             </div>
-
-            <button
-              onClick={() => handleCopy(fixedCode)}
-              disabled={!fixedCode}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium border transition shadow-sm ${
-                copied
-                  ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
-                  : 'bg-indigo-600/20 hover:bg-indigo-600/30 border-indigo-500/40 text-indigo-200 hover:text-white'
-              } disabled:opacity-40 disabled:hover:bg-transparent`}
-            >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'Copied!' : 'Copy Result'}</span>
-            </button>
+            {fixedCode && (
+              <button
+                onClick={copyToClipboard}
+                className="flex items-center gap-1 text-[11px] bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded text-slate-300 border border-slate-700 transition"
+              >
+                {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                <span>{copied ? 'Copied! ✅' : 'Copy 📋'}</span>
+              </button>
+            )}
           </div>
 
-          <div className="flex-1 min-h-0 relative">
-            {!fixedCode ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-3 shadow-inner">
-                  <FileCode2 className="w-6 h-6 text-indigo-400" />
-                </div>
-                <p className="text-sm font-semibold text-slate-300">Clean Output Column</p>
-                <p className="text-xs text-slate-500 max-w-xs mt-1 leading-relaxed">
-                  Click <span className="text-indigo-400 font-medium">"Debug & Fix"</span> above to test code repairs.
-                </p>
-              </div>
-            ) : showDiff ? (
-              <DiffEditor
-                height="100%"
-                theme="vs-dark"
-                language={language}
-                original={inputCode}
-                modified={fixedCode}
-                options={{
-                  readOnly: true,
-                  minimap: { enabled: false },
-                  fontSize: 13,
-                  renderSideBySide: false,
-                  automaticLayout: true,
-                  padding: { top: 12 },
-                }}
-              />
-            ) : (
+          <div className="flex-1 overflow-hidden relative">
+            {fixedCode ? (
               <Editor
                 height="100%"
-                theme="vs-dark"
                 language={language}
+                theme="vs-dark"
                 value={fixedCode}
                 options={{
                   readOnly: true,
                   minimap: { enabled: false },
                   fontSize: 13,
-                  fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                  lineNumbers: 'on',
+                  wordWrap: 'on',
                   scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  padding: { top: 12 },
+                  lineNumbers: 'on',
                 }}
               />
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500 space-y-3">
+                <span className="text-4xl">🪄</span>
+                <p className="text-xs max-w-xs leading-relaxed">
+                  Clean, production-ready code will appear here after clicking <b>Run Debug Engine</b> ⚡
+                </p>
+              </div>
             )}
           </div>
-        </div>
-      </div>
+        </section>
+
+      </main>
     </div>
   );
 }
