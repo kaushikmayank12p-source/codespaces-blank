@@ -1,6 +1,16 @@
 # DebugCraft Studio
 
-DebugCraft Studio is a small web workspace for reviewing and repairing code. It combines a Monaco editor, a debugging chat panel, and a read-only output pane so you can keep the code, the question, and the suggested fix in view at the same time.
+DebugCraft Studio is a small web interface styled like a debugger. It combines a Monaco editor, a conversational chat panel, and a read-only output pane for exploring code, asking programming questions, and viewing suggested changes. It also has several built-in games hidden behind special chat codes.
+
+## Built-in games
+
+Type one of these codes into the Copilot chat to open a game:
+
+- `SKYBIRD`: a flying bird game with pipes, scoring, keyboard controls, and restart behavior.
+- `HILLCLIMB`: a hill-driving game with rolling terrain, gas and brake controls, fuel, and distance tracking.
+- `CODEBREAK`: Signal Shift, a timed reaction game about clicking a moving signal as quickly as possible.
+
+Games run inside the app and can be closed with the close button or `Esc`.
 
 ## What it does
 
@@ -47,7 +57,7 @@ The API route reads `OPENROUTER_API_KEY` from the environment. Add it to `.env.l
 OPENROUTER_API_KEY=your-key-here
 ```
 
-Requests still receive a response when the remote service cannot be reached; the route uses its local Java checks as a fallback.
+The interface still includes local responses and Java code checks when the remote service is unavailable.
 
 ## Project layout
 
