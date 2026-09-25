@@ -78,6 +78,17 @@ button, select, input { font: inherit; }
 .hill-restart { display: grid; place-items: center; width: 32px; color: #f5d77b; }
 .hill-restart:hover { background: rgba(245, 215, 123, 0.12); }
 .hill-control kbd { margin-left: 5px; color: #8496a6; font-family: var(--font-geist-mono), monospace; font-size: 0.58rem; }
+.signal-modal { width: min(100%, 500px); }
+.signal-hud { display: flex; justify-content: space-between; padding: 12px 16px 0; color: #8295a4; font-size: 0.65rem; }
+.signal-hud strong { margin-left: 4px; color: #f0d77a; font-family: var(--font-geist-mono), monospace; }
+.signal-board { position: relative; height: 360px; margin: 12px; overflow: hidden; border: 1px solid rgba(139, 240, 244, 0.18); border-radius: 8px; background: radial-gradient(circle at center, rgba(87, 219, 216, 0.14), transparent 34%), #09151f; }
+.signal-board::before { position: absolute; inset: 0; background-image: linear-gradient(rgba(139, 240, 244, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(139, 240, 244, 0.08) 1px, transparent 1px); background-size: 36px 36px; content: ''; opacity: 0.45; }
+.signal-target { position: absolute; width: 30px; height: 30px; transform: translate(-50%, -50%); border: 5px solid rgba(188, 255, 232, 0.9); border-radius: 50%; background: #5ae0b4; box-shadow: 0 0 0 6px rgba(90, 224, 180, 0.13), 0 0 30px rgba(90, 224, 180, 0.9); cursor: crosshair; animation: signal-pulse 1s ease-in-out infinite; }
+.signal-target:hover { transform: translate(-50%, -50%) scale(1.14); }
+.signal-prompt { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 24px; color: #96adba; font-size: 0.69rem; text-align: center; pointer-events: none; }
+.signal-prompt strong { color: #e5f3f2; font-size: 1rem; }
+.signal-actions { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 42px; color: #718597; font-size: 0.63rem; }
+@keyframes signal-pulse { 50% { box-shadow: 0 0 0 12px rgba(90, 224, 180, 0.05), 0 0 42px rgba(90, 224, 180, 0.9); } }
 
 @media (max-width: 767px) {
   .studio-header { height: auto; min-height: 68px; gap: 12px; padding: 12px 14px; }
@@ -91,4 +102,5 @@ button, select, input { font: inherit; }
   .chat-panel { min-height: 420px !important; }
   .game-backdrop { padding: 10px; }
   .game-stage { padding: 10px; }
+  .signal-board { height: 300px; }
 }

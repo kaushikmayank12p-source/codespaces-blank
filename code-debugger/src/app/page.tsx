@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import SkybirdGame from './SkybirdGame';
 import HillClimbGame from './HillClimbGame';
+import SignalShiftGame from './SignalShiftGame';
 import { 
   Play, 
   Send, 
@@ -77,6 +78,7 @@ export default function DebugCraftStudio() {
   const [copied, setCopied] = useState(false);
   const [isGameOpen, setIsGameOpen] = useState(false);
   const [isHillClimbOpen, setIsHillClimbOpen] = useState(false);
+  const [isSignalOpen, setIsSignalOpen] = useState(false);
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -117,6 +119,18 @@ export default function DebugCraftStudio() {
         id: Date.now().toString(),
         role: 'assistant',
         content: 'Hill Climb unlocked. Keep your wheels on the ridge.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }]);
+      return;
+    }
+
+    if (query.trim().toLowerCase() === 'codebreak') {
+      setPrompt('');
+      setIsSignalOpen(true);
+      setMessages((prev) => [...prev, {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: 'Signal Shift unlocked. See how many signals you can catch.',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       }]);
       return;
@@ -382,6 +396,7 @@ export default function DebugCraftStudio() {
       </footer>
       {isGameOpen && <SkybirdGame onClose={() => setIsGameOpen(false)} />}
       {isHillClimbOpen && <HillClimbGame onClose={() => setIsHillClimbOpen(false)} />}
+      {isSignalOpen && <SignalShiftGame onClose={() => setIsSignalOpen(false)} />}
     </div>
   );
 }
