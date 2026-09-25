@@ -10,9 +10,24 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY; /*
   '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';
 
 */
-function analyzeCodeLocally(code: string, language: string) {
+function analyzeCodeLocally(code: string, language: string, instruction: string) {
   let fixedCode = code;
   const issues: string[] = [];
+  const cleanInstruction = instruction.toLowerCase().trim();
+
+  if (/^(hi|hello|hey|yo|sup)\b/.test(cleanInstruction)) {
+    return {
+      fixedCode: code,
+      diagnosis: 'Hi! I am your coding copilot. Ask me to explain, write, or debug code in the editor.',
+    };
+  }
+
+  if (cleanInstruction.includes('how are you')) {
+    return {
+      fixedCode: code,
+      diagnosis: 'I am ready to help. Tell me what you are building or paste an error, and we can work through it together.',
+    };
+  }
 
   if (language === 'java') {
     if (fixedCode.includes('String operator = null;')) {
@@ -146,6 +161,6 @@ export async function POST(req: Request) {
     console.warn('Upstream model unavailable or timed out, executing local developer engine:', apiError);
   }
 
-  const fallback = analyzeCodeLocally(code, language);
+  const fallback = analyzeCodeLocally(code, language, instruction);
   return NextResponse.json(fallback);
 }
