@@ -6,11 +6,11 @@ DebugCraft Studio is a browser-based coding interface styled like a compact debu
 
 Enter one of these codes in the Copilot chat:
 
-- `SKYBIRD` opens a flying bird game with pipes, scoring, keyboard controls, and restart behavior.
-- `HILLCLIMB` opens a small hill-driving game with rolling terrain, gas, brake, fuel, and distance tracking.
-- `CODEBREAK` opens Signal Shift, a timed reaction game where you click a moving signal to build a score.
+- `SKYBIRD` opens a flying bird game with pipes, scoring, keyboard controls, and if you lose you can restart it again.
+- `HILLCLIMB` opens a small hill-driving game with rolling terrain, gas, brake, fuel, and distance tracking. Here you don't have to stop if you stop your vehicle you will lose.
+- `CODEBREAK` opens a game with calculate your reaction time, a timed reaction game where you click a moving signal to build a score.
 
-Each game can be played inside the app and closed with the close button or `Esc`.
+Each game can be played inside my web app and can be closed with the close button or `Esc` or by refreshing the page.
 
 The Next.js application lives in [`code-debugger/`](code-debugger/). See the [application README](code-debugger/README.md) for setup, configuration, and the project layout.
 
