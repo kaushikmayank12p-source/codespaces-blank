@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DebugCraft Studio
 
-## Getting Started
+DebugCraft Studio is a small web workspace for reviewing and repairing code. It combines a Monaco editor, a debugging chat panel, and a read-only output pane so you can keep the code, the question, and the suggested fix in view at the same time.
 
-First, run the development server:
+## What it does
+
+- Accepts code in the editor and lets you choose a language.
+- Sends an analysis request with an optional instruction or question.
+- Displays a diagnosis alongside the repaired code returned by the debugging route.
+- Falls back to a local Java analysis when the upstream model is unavailable.
+- Copies the resolved code to the clipboard from the output panel.
+
+The current editor includes starter Java code with several intentional issues. That makes it useful for checking the full request flow without preparing a sample from scratch.
+
+## Stack
+
+- Next.js 16 with the App Router
+- React 19 and TypeScript
+- Tailwind CSS 4
+- Monaco Editor via `@monaco-editor/react`
+- Lucide React icons
+- OpenRouter-compatible OpenAI client for the remote analysis path
+
+## Run locally
+
+Use Node.js 20 or newer, then install dependencies and start the development server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) once the server is running.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+To create a production build:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm run start
+```
 
-## Learn More
+## Configuration
 
-To learn more about Next.js, take a look at the following resources:
+The API route reads `OPENROUTER_API_KEY` from the environment. Add it to `.env.local` when you want to use the remote model:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+OPENROUTER_API_KEY=your-key-here
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Requests still receive a response when the remote service cannot be reached; the route uses its local Java checks as a fallback.
 
-## Deploy on Vercel
+## Project layout
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```text
+src/
+├── app/
+│   ├── api/debug/route.ts   # Analysis endpoint and local fallback
+│   ├── globals.css           # Workspace theme and responsive layout
+│   ├── layout.tsx            # Metadata and font setup
+│   └── page.tsx              # Debugging workspace
+└── lib/constants.ts          # Language and starter-code definitions
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Notes
+
+The API route is intentionally lightweight. It is a useful starting point for adding richer language-specific diagnostics, streaming responses, authentication, or persistent project history later.

@@ -5,15 +5,17 @@ import dynamic from 'next/dynamic';
 import { 
   Play, 
   Send, 
-  Sparkles, 
   Code2, 
-  Terminal, 
   Bot, 
-  User, 
-  CheckCircle2, 
+  User,
   RefreshCw,
   Copy,
-  Check
+  Check,
+  ChevronDown,
+  FileCode2,
+  ShieldCheck,
+  WandSparkles,
+  Braces,
 } from 'lucide-react';
 
 const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
@@ -24,6 +26,12 @@ interface Message {
   content: string;
   timestamp: string;
 }
+
+type ApiResponse = {
+  fixedCode?: string;
+  diagnosis?: string;
+  error?: string;
+};
 
 const DEFAULT_JAVA_CODE = `import java.util.Scanner;
 
@@ -70,8 +78,8 @@ export default function DebugCraftStudio() {
     {
       id: 'welcome',
       role: 'assistant',
-      content: "👋 **Welcome to DebugCraft Studio!** 🚀\n\nI'm your Principal Software Engineer copilot. Drop buggy code into the center editor, ask any questions here, or hit **⚡ Run Debug Engine** to auto-fix and diagnose logic bugs.",
-      timestamp: 'Ready',
+      content: "Welcome to DebugCraft Studio. Paste code into the editor, then run an analysis to identify syntax, logic, and runtime issues. You can also ask a focused question in the chat.",
+      timestamp: 'Just now',
     },
   ]);
 
@@ -97,6 +105,11 @@ export default function DebugCraftStudio() {
     setPrompt('');
     setIsProcessing(true);
 
+    const conversation = messages
+      .filter((message) => message.id !== 'welcome')
+      .slice(-8)
+      .map(({ role, content }) => ({ role, content }));
+
     try {
       const res = await fetch('/api/debug', {
         method: 'POST',
@@ -105,13 +118,14 @@ export default function DebugCraftStudio() {
           code: inputCode,
           language,
           instruction: query,
+          conversation,
         }),
       });
 
-      const data = await res.json();
+      const data: ApiResponse = await res.json();
 
-      if (data.error) {
-        throw new Error(data.error);
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'The debugging service returned an error.');
       }
 
       if (data.fixedCode !== undefined) {
@@ -126,11 +140,12 @@ export default function DebugCraftStudio() {
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unable to connect to AI debugging pipeline.';
       const errMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `⚠️ **Engineer Alert**: ${err.message || 'Unable to connect to AI debugging pipeline.'}`,
+        content: `⚠️ **Engineer Alert**: ${message}`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, errMsg]);
@@ -140,66 +155,63 @@ export default function DebugCraftStudio() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#0d1117] text-slate-100 font-sans overflow-hidden">
-      {/* Top Navigation Bar */}
-      <header className="h-14 border-b border-slate-800 bg-[#161b22] px-6 flex items-center justify-between shadow-md">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">🛠️</span>
-          <h1 className="font-bold text-lg tracking-wide bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
-            DebugCraft Studio
-          </h1>
-          <span className="text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-mono">
-            v2.0 ⚡
-          </span>
+    <div className="studio-shell flex flex-col h-screen overflow-hidden">
+      <header className="studio-header h-16 shrink-0 px-5 lg:px-7 flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="brand-mark"><Braces className="w-4 h-4" /></div>
+          <div className="min-w-0">
+            <h1 className="brand-name">DebugCraft <span>Studio</span></h1>
+            <p className="brand-subtitle">Code analysis workspace</p>
+          </div>
+          <span className="version-tag">BETA</span>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-[#0d1117] border border-slate-700 px-3 py-1.5 rounded-lg">
-            <span className="text-sm">🌐</span>
+        <div className="flex items-center gap-3">
+          <div className="language-picker">
+            <Code2 className="w-4 h-4 text-cyan-300" />
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="bg-transparent text-xs text-slate-200 focus:outline-none cursor-pointer"
+              aria-label="Programming language"
+              className="bg-transparent text-sm text-slate-200 focus:outline-none cursor-pointer appearance-none pr-5"
             >
-              <option value="java">☕ Java</option>
-              <option value="python">🐍 Python</option>
-              <option value="javascript">📜 JavaScript</option>
-              <option value="typescript">🔷 TypeScript</option>
-              <option value="c">⚙️ C</option>
-              <option value="cpp">🚀 C++</option>
+              <option value="java">Java</option>
+              <option value="python">Python</option>
+              <option value="javascript">JavaScript</option>
+              <option value="typescript">TypeScript</option>
+              <option value="c">C</option>
+              <option value="cpp">C++</option>
             </select>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-500 -ml-5 pointer-events-none" />
           </div>
 
           <button
             onClick={() => executeDebug()}
             disabled={isProcessing}
-            className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow transition active:scale-95 cursor-pointer"
+            className="primary-action"
           >
             {isProcessing ? (
               <>
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                <span>Diagnosing... 🧠</span>
+                <span>Analyzing</span>
               </>
             ) : (
               <>
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>Run Debug Engine ⚡</span>
+                <span>Run analysis</span>
               </>
             )}
           </button>
         </div>
       </header>
 
-      {/* Main 3-Column Responsive Grid */}
-      <main className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-0 overflow-hidden divide-y md:divide-y-0 md:divide-x divide-slate-800">
+      <main className="workspace-grid flex-1 grid grid-cols-1 md:grid-cols-12 gap-0 overflow-hidden divide-y md:divide-y-0 md:divide-x divide-slate-800/80">
         
         {/* Column 1: AI Chat & Reasoning Panel (3 cols) */}
-        <section className="col-span-12 md:col-span-3 flex flex-col bg-[#161b22]/70 h-full overflow-hidden">
-          <div className="p-3 border-b border-slate-800 flex items-center gap-2 bg-[#161b22]">
-            <Bot className="w-4 h-4 text-purple-400" />
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-              Copilot Chat & Diagnosis 💬
-            </h2>
+        <section className="panel chat-panel col-span-12 md:col-span-3 flex flex-col h-full overflow-hidden">
+          <div className="panel-header">
+            <div className="panel-title"><Bot className="w-4 h-4 text-violet-300" /><h2>Copilot</h2></div>
+            <span className="live-indicator"><span />Online</span>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -211,23 +223,23 @@ export default function DebugCraftStudio() {
                 }`}
               >
                 {m.role === 'assistant' && (
-                  <div className="w-7 h-7 rounded-full bg-purple-600/20 border border-purple-500/40 flex items-center justify-center shrink-0">
-                    🤖
+                  <div className="avatar assistant-avatar">
+                    <Bot className="w-3.5 h-3.5" />
                   </div>
                 )}
                 <div
                   className={`p-3 rounded-xl max-w-[85%] whitespace-pre-wrap ${
                     m.role === 'user'
-                      ? 'bg-indigo-600 text-white rounded-br-none shadow-sm'
-                      : 'bg-[#21262d] text-slate-200 border border-slate-700/60 rounded-bl-none shadow-inner'
+                      ? 'message user-message'
+                      : 'message assistant-message'
                   }`}
                 >
                   {m.content}
-                  <div className="mt-1 text-[10px] opacity-40 text-right">{m.timestamp}</div>
+                  <div className="message-time">{m.timestamp}</div>
                 </div>
                 {m.role === 'user' && (
-                  <div className="w-7 h-7 rounded-full bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center shrink-0">
-                    👨‍💻
+                  <div className="avatar user-avatar">
+                    <User className="w-3.5 h-3.5" />
                   </div>
                 )}
               </div>
@@ -239,19 +251,21 @@ export default function DebugCraftStudio() {
               e.preventDefault();
               if (prompt.trim()) executeDebug(prompt);
             }}
-            className="p-3 border-t border-slate-800 bg-[#161b22] flex gap-2"
+            className="chat-composer p-3 border-t border-slate-800/80 flex gap-2"
           >
             <input
               type="text"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Ask a question or type 'hi'... 💭"
-              className="flex-1 bg-[#0d1117] border border-slate-700 px-3 py-2 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+              placeholder="Ask about this code..."
+              aria-label="Ask the copilot"
+              className="chat-input flex-1 px-3 py-2 text-xs"
             />
             <button
               type="submit"
               disabled={isProcessing}
-              className="bg-indigo-600 hover:bg-indigo-500 p-2 rounded-lg text-white disabled:opacity-50 transition"
+              className="send-button disabled:opacity-50"
+              aria-label="Send message"
             >
               <Send className="w-3.5 h-3.5" />
             </button>
@@ -259,17 +273,13 @@ export default function DebugCraftStudio() {
         </section>
 
         {/* Column 2: Active Input Editor (5 cols) */}
-        <section className="col-span-12 md:col-span-5 flex flex-col bg-[#0d1117] h-full overflow-hidden">
-          <div className="p-3 border-b border-slate-800 flex items-center justify-between bg-[#161b22]">
+        <section className="panel col-span-12 md:col-span-5 flex flex-col h-full overflow-hidden">
+          <div className="panel-header">
             <div className="flex items-center gap-2">
-              <Code2 className="w-4 h-4 text-blue-400" />
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                Source Code Editor ✍️
-              </h2>
+              <FileCode2 className="w-4 h-4 text-cyan-300" />
+              <h2 className="panel-heading">Source code</h2>
             </div>
-            <span className="text-[11px] text-amber-400/80 font-mono bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-              Input Area 📝
-            </span>
+            <span className="panel-meta">editable</span>
           </div>
 
           <div className="flex-1 overflow-hidden">
@@ -292,21 +302,19 @@ export default function DebugCraftStudio() {
         </section>
 
         {/* Column 3: Fixed Clean Output Column (4 cols) */}
-        <section className="col-span-12 md:col-span-4 flex flex-col bg-[#0d1117] h-full overflow-hidden">
-          <div className="p-3 border-b border-slate-800 flex items-center justify-between bg-[#161b22]">
+        <section className="panel col-span-12 md:col-span-4 flex flex-col h-full overflow-hidden">
+          <div className="panel-header">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-emerald-400" />
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                Resolved Output ✨
-              </h2>
+              <WandSparkles className="w-4 h-4 text-emerald-300" />
+              <h2 className="panel-heading">Resolved output</h2>
             </div>
             {fixedCode && (
               <button
                 onClick={copyToClipboard}
-                className="flex items-center gap-1 text-[11px] bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded text-slate-300 border border-slate-700 transition"
+                className="copy-button"
               >
                 {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                <span>{copied ? 'Copied! ✅' : 'Copy 📋'}</span>
+                <span>{copied ? 'Copied' : 'Copy'}</span>
               </button>
             )}
           </div>
@@ -328,17 +336,22 @@ export default function DebugCraftStudio() {
                 }}
               />
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500 space-y-3">
-                <span className="text-4xl">🪄</span>
-                <p className="text-xs max-w-xs leading-relaxed">
-                  Clean, production-ready code will appear here after clicking <b>Run Debug Engine</b> ⚡
-                </p>
+              <div className="empty-output h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
+                <div className="empty-icon"><ShieldCheck className="w-6 h-6" /></div>
+                <div>
+                  <p className="text-sm text-slate-300 font-medium">Ready for a clean pass</p>
+                  <p className="text-xs max-w-xs leading-relaxed mt-1">Run an analysis to see repaired code and a diagnosis here.</p>
+                </div>
               </div>
             )}
           </div>
         </section>
 
       </main>
+      <footer className="status-bar">
+        <span><span className="status-dot" />Local workspace</span>
+        <span>Monaco editor</span>
+      </footer>
     </div>
   );
 }

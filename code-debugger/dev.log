@@ -1,0 +1,24 @@
+nohup: ignoring input
+
+> code-debugger@0.1.0 dev
+> next dev
+
+▲ Next.js 16.3.5 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://10.0.0.138:3000
+- Environments: .env.local
+✓ Ready in 2.5s
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /workspaces/codespaces-blank/package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * /workspaces/codespaces-blank/code-debugger/package-lock.json
+
+✓ Running next.config.ts took 4.0s
+⚠ Slow filesystem detected. The benchmark took 1536ms. If /workspaces/codespaces-blank/code-debugger/.next/dev is a network drive, consider moving it to a local folder.
+See more: https://nextjs.org/docs/app/guides/local-development
+
+○ Compiling / ...
+ GET / 200 in 13.4s (next.js: 13.1s, application-code: 269ms)
+ POST /api/debug 200 in 349ms (next.js: 320ms, application-code: 29ms)

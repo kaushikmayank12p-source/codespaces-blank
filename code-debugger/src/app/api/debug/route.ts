@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-const OPENROUTER_API_KEY =
-  process.env.OPENROUTER_API_KEY ||
+type ConversationMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY; /*
   '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';
 
+*/
 function analyzeCodeLocally(code: string, language: string) {
   let fixedCode = code;
   const issues: string[] = [];
@@ -61,12 +66,22 @@ export async function POST(req: Request) {
   let code = '';
   let language = 'java';
   let instruction = '';
+  let conversation: ConversationMessage[] = [];
 
   try {
     const body = await req.json();
     code = body.code || '';
     language = body.language || 'java';
     instruction = (body.instruction || '').trim();
+    conversation = Array.isArray(body.conversation)
+      ? body.conversation
+          .filter(
+            (message: ConversationMessage) =>
+              (message.role === 'user' || message.role === 'assistant') &&
+              typeof message.content === 'string'
+          )
+          .slice(-8)
+      : [];
   } catch {
     return NextResponse.json({
       fixedCode: '',
@@ -74,12 +89,17 @@ export async function POST(req: Request) {
     });
   }
 
-  const cleanQuery = instruction.toLowerCase();
-  const greetings = ['hi', 'hello', 'hey', 'hu', 'yo', 'sup', 'help'];
-  if (greetings.some((g) => cleanQuery === g || cleanQuery.startsWith(g + ' '))) {
+  if (!instruction) {
     return NextResponse.json({
       fixedCode: code,
-      diagnosis: "Hey! 👋 I'm your copilot. Paste code into the center editor and hit **Run Debug Engine ⚡**, or ask me anything about your project!",
+      diagnosis: 'Ask a question, describe a feature to build, or request a review of the code in the editor.',
+    });
+  }
+
+  if (!OPENROUTER_API_KEY) {
+    return NextResponse.json({
+      fixedCode: code,
+      diagnosis: 'The AI provider is not configured. Add `OPENROUTER_API_KEY` to `.env.local` to enable interactive answers.',
     });
   }
 
@@ -100,11 +120,15 @@ export async function POST(req: Request) {
       messages: [
         {
           role: 'system',
-          content: `You are a Principal Software Engineer. Analyze and repair code. Output ONLY valid JSON: {"fixedCode": "complete repaired code", "diagnosis": "markdown diagnosis"}`,
+          content: `You are DebugCraft, an interactive senior software engineer. Answer programming questions clearly, write complete code when asked, and debug or improve the code supplied by the user. Use the conversation for context. Always return ONLY valid JSON in this shape: {"fixedCode":"the complete best version of the editor code, or the original code when no code change is needed","diagnosis":"a helpful markdown answer"}. When the user asks a general question, answer it in diagnosis and leave fixedCode unchanged. Never claim to have run code unless execution results are provided. The selected language is ${language}.`,
         },
+        ...conversation.map((message) => ({
+          role: message.role as 'user' | 'assistant',
+          content: message.content,
+        })),
         {
           role: 'user',
-          content: `Language: ${language}\nInstruction: ${instruction}\n\nCode:\n${code}`,
+          content: `Current request: ${instruction}\n\nCurrent editor code:\n${code}`,
         },
       ],
       temperature: 0.2,
