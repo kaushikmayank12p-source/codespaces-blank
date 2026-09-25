@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import SkybirdGame from './SkybirdGame';
+import HillClimbGame from './HillClimbGame';
 import { 
   Play, 
   Send, 
@@ -75,6 +76,7 @@ export default function DebugCraftStudio() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isGameOpen, setIsGameOpen] = useState(false);
+  const [isHillClimbOpen, setIsHillClimbOpen] = useState(false);
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -103,6 +105,18 @@ export default function DebugCraftStudio() {
         id: Date.now().toString(),
         role: 'assistant',
         content: 'Secret mode unlocked. Welcome to Skybird.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }]);
+      return;
+    }
+
+    if (query.trim().toLowerCase() === 'hillclimb') {
+      setPrompt('');
+      setIsHillClimbOpen(true);
+      setMessages((prev) => [...prev, {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: 'Hill Climb unlocked. Keep your wheels on the ridge.',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       }]);
       return;
@@ -367,6 +381,7 @@ export default function DebugCraftStudio() {
         <span>Monaco editor</span>
       </footer>
       {isGameOpen && <SkybirdGame onClose={() => setIsGameOpen(false)} />}
+      {isHillClimbOpen && <HillClimbGame onClose={() => setIsHillClimbOpen(false)} />}
     </div>
   );
 }
