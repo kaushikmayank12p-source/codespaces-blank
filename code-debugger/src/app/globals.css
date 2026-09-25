@@ -54,6 +54,20 @@ button, select, input { font: inherit; }
 .empty-icon { display: grid; place-items: center; width: 48px; height: 48px; color: #72dcb1; border: 1px solid rgba(97, 223, 163, 0.23); border-radius: 12px; background: rgba(97, 223, 163, 0.08); }
 .status-bar { display: flex; align-items: center; justify-content: space-between; min-height: 25px; padding: 0 12px; color: #687789; border-top: 1px solid var(--line); background: #0b1016; font-size: 0.62rem; }
 .status-bar span { display: flex; align-items: center; gap: 6px; }
+.game-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 24px; background: rgba(3, 7, 12, 0.78); backdrop-filter: blur(10px); }
+.game-modal { width: min(100%, 480px); overflow: hidden; border: 1px solid rgba(139, 240, 244, 0.24); border-radius: 14px; background: #0d1824; box-shadow: 0 26px 90px rgba(0, 0, 0, 0.55), 0 0 50px rgba(85, 214, 232, 0.08); }
+.game-toolbar, .game-footer { display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; }
+.game-toolbar { border-bottom: 1px solid var(--line); }
+.game-title { display: flex; align-items: center; gap: 8px; color: #dceef1; font-size: 0.76rem; font-weight: 650; }
+.game-title svg { color: #f5d77b; }
+.game-score { margin-left: 4px; color: #f5d77b; font-family: var(--font-geist-mono), monospace; font-size: 0.68rem; letter-spacing: 0.08em; }
+.game-close { display: grid; place-items: center; width: 28px; height: 28px; color: #8496a6; border: 1px solid transparent; border-radius: 6px; background: transparent; cursor: pointer; }
+.game-close:hover { color: #e6edf3; border-color: var(--line); background: rgba(139, 164, 187, 0.1); }
+.game-stage { position: relative; display: grid; place-items: center; padding: 14px; cursor: pointer; }
+.game-stage canvas { display: block; width: min(100%, 420px); height: auto; border: 1px solid rgba(139, 240, 244, 0.16); border-radius: 8px; }
+.game-prompt { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #b8cbd4; font-size: 0.69rem; text-align: center; pointer-events: none; }
+.game-prompt strong { color: #f2f7f8; font-size: 1rem; letter-spacing: -0.01em; }
+.game-footer { color: #718597; border-top: 1px solid var(--line); font-size: 0.62rem; }
 
 @media (max-width: 767px) {
   .studio-header { height: auto; min-height: 68px; gap: 12px; padding: 12px 14px; }
@@ -65,4 +79,6 @@ button, select, input { font: inherit; }
   .workspace-grid { overflow-y: auto; }
   .workspace-grid > section { min-height: 390px; }
   .chat-panel { min-height: 420px !important; }
+  .game-backdrop { padding: 10px; }
+  .game-stage { padding: 10px; }
 }

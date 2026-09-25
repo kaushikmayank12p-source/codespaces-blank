@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
+import SkybirdGame from './SkybirdGame';
 import { 
   Play, 
   Send, 
@@ -73,6 +74,7 @@ export default function DebugCraftStudio() {
   const [prompt, setPrompt] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isGameOpen, setIsGameOpen] = useState(false);
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -93,6 +95,18 @@ export default function DebugCraftStudio() {
   const executeDebug = async (userPrompt?: string) => {
     const query = userPrompt || prompt || 'Analyze and resolve all bugs in this code.';
     if (isProcessing) return;
+
+    if (query.trim().toLowerCase() === 'skybird') {
+      setPrompt('');
+      setIsGameOpen(true);
+      setMessages((prev) => [...prev, {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: 'Secret mode unlocked. Welcome to Skybird.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }]);
+      return;
+    }
 
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -352,6 +366,7 @@ export default function DebugCraftStudio() {
         <span><span className="status-dot" />Local workspace</span>
         <span>Monaco editor</span>
       </footer>
+      {isGameOpen && <SkybirdGame onClose={() => setIsGameOpen(false)} />}
     </div>
   );
 }
