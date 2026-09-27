@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "export",
-  basePath: "/codespaces-blank",
+  basePath: process.env.GITHUB_PAGES === "true" ? "/codespaces-blank" : "",
   images: {
     unoptimized: true,
   },
