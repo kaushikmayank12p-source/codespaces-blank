@@ -21,7 +21,14 @@ import {
   Braces,
 } from 'lucide-react';
 
-const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
+const Editor = dynamic(() => import('@monaco-editor/react'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full items-center justify-center text-xs text-slate-400">
+      Loading editor…
+    </div>
+  ),
+});
 
 interface Message {
   id: string;
