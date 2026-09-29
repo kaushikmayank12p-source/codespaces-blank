@@ -6,10 +6,7 @@ type ConversationMessage = {
   content: string;
 };
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY; /*
-  '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';
-
-*/
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 function analyzeCodeLocally(code: string, language: string, instruction: string) {
   let fixedCode = code;
   const issues: string[] = [];
@@ -112,10 +109,7 @@ export async function POST(req: Request) {
   }
 
   if (!OPENROUTER_API_KEY) {
-    return NextResponse.json({
-      fixedCode: code,
-      diagnosis: 'The AI provider is not configured. Add `OPENROUTER_API_KEY` to `.env.local` to enable interactive answers.',
-    });
+    return NextResponse.json(analyzeCodeLocally(code, language, instruction));
   }
 
   try {

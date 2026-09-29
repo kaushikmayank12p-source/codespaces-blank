@@ -68,7 +68,6 @@ src/
 │   ├── globals.css           # Workspace theme and responsive layout
 │   ├── layout.tsx            # Metadata and font setup
 │   └── page.tsx              # Debugging workspace
-└── lib/constants.ts          # Language and starter-code definitions
 ```
 
 ## Notes
