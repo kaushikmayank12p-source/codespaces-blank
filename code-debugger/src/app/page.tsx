@@ -24,7 +24,7 @@ import {
 const Editor = dynamic(() => import('@monaco-editor/react'), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full items-center justify-center text-xs text-slate-400">
+    <div className="flex h-full items-center justify-center text-xs text-slate-500">
       Loading editor…
     </div>
   ),
@@ -217,12 +217,12 @@ export default function DebugCraftStudio() {
 
         <div className="flex items-center gap-3">
           <div className="language-picker">
-            <Code2 className="w-4 h-4 text-cyan-300" />
+            <Code2 className="w-4 h-4 text-blue-600" />
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
               aria-label="Programming language"
-              className="bg-transparent text-sm text-slate-200 focus:outline-none cursor-pointer appearance-none pr-5"
+              className="bg-transparent text-sm text-slate-800 focus:outline-none cursor-pointer appearance-none pr-5"
             >
               <option value="java">Java</option>
               <option value="python">Python</option>
@@ -259,7 +259,7 @@ export default function DebugCraftStudio() {
         {/* Column 1: AI Chat & Reasoning Panel (3 cols) */}
         <section className="panel chat-panel col-span-12 md:col-span-3 flex flex-col h-full overflow-hidden">
           <div className="panel-header">
-            <div className="panel-title"><Bot className="w-4 h-4 text-violet-300" /><h2>Copilot</h2></div>
+            <div className="panel-title"><Bot className="w-4 h-4 text-blue-600" /><h2>Copilot</h2></div>
             <span className="live-indicator"><span />Online</span>
           </div>
 
@@ -325,7 +325,7 @@ export default function DebugCraftStudio() {
         <section className="panel col-span-12 md:col-span-5 flex flex-col h-full overflow-hidden">
           <div className="panel-header">
             <div className="flex items-center gap-2">
-              <FileCode2 className="w-4 h-4 text-cyan-300" />
+              <FileCode2 className="w-4 h-4 text-blue-600" />
               <h2 className="panel-heading">Source code</h2>
             </div>
             <span className="panel-meta">editable</span>
@@ -354,7 +354,7 @@ export default function DebugCraftStudio() {
         <section className="panel col-span-12 md:col-span-4 flex flex-col h-full overflow-hidden">
           <div className="panel-header">
             <div className="flex items-center gap-2">
-              <WandSparkles className="w-4 h-4 text-emerald-300" />
+              <WandSparkles className="w-4 h-4 text-teal-700" />
               <h2 className="panel-heading">Resolved output</h2>
             </div>
             {fixedCode && (
@@ -388,7 +388,7 @@ export default function DebugCraftStudio() {
               <div className="empty-output h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
                 <div className="empty-icon"><ShieldCheck className="w-6 h-6" /></div>
                 <div>
-                  <p className="text-sm text-slate-300 font-medium">Ready for a clean pass</p>
+                  <p className="text-sm text-slate-700 font-medium">Ready for a clean pass</p>
                   <p className="text-xs max-w-xs leading-relaxed mt-1">Run an analysis to see repaired code and a diagnosis here.</p>
                 </div>
               </div>
