@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   WandSparkles,
   Braces,
+  ArrowRight,
 } from 'lucide-react';
 
 const Editor = dynamic(() => import('@monaco-editor/react'), {
@@ -77,6 +78,7 @@ public class BuggyCalculator {
 }`;
 
 export default function DebugCraftStudio() {
+  const [showWelcome, setShowWelcome] = useState(true);
   const [language, setLanguage] = useState('java');
   const [inputCode, setInputCode] = useState(DEFAULT_JAVA_CODE);
   const [fixedCode, setFixedCode] = useState('');
@@ -96,11 +98,28 @@ export default function DebugCraftStudio() {
     },
   ]);
 
-  const copyToClipboard = () => {
+  const copyToClipboard = async () => {
     if (!fixedCode) return;
-    navigator.clipboard.writeText(fixedCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(fixedCode);
+      } else {
+        const tempTextArea = document.createElement('textarea');
+        tempTextArea.value = fixedCode;
+        tempTextArea.setAttribute('readonly', 'true');
+        tempTextArea.style.position = 'fixed';
+        tempTextArea.style.left = '-9999px';
+        document.body.appendChild(tempTextArea);
+        tempTextArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempTextArea);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
   };
 
   const executeDebug = async (userPrompt?: string) => {
@@ -150,11 +169,12 @@ export default function DebugCraftStudio() {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const nextMessages = [...messages, userMsg];
+    setMessages(nextMessages);
     setPrompt('');
     setIsProcessing(true);
 
-    const conversation = messages
+    const conversation = nextMessages
       .filter((message) => message.id !== 'welcome')
       .slice(-8)
       .map(({ role, content }) => ({ role, content }));
@@ -202,6 +222,68 @@ export default function DebugCraftStudio() {
       setIsProcessing(false);
     }
   };
+
+  if (showWelcome) {
+    return (
+      <div className="welcome-shell">
+        <header className="welcome-header">
+          <div className="welcome-brand">
+            <div className="brand-mark"><Braces className="w-4 h-4" /></div>
+            <div>
+              <p className="brand-name">DebugCraft <span>Studio</span></p>
+              <p className="brand-subtitle">Code analysis workspace</p>
+            </div>
+          </div>
+          <span className="welcome-status"><span />Workspace ready</span>
+        </header>
+
+        <main className="welcome-main" aria-labelledby="welcome-title">
+          <section className="welcome-copy">
+            <p className="welcome-eyebrow"><span />A clearer way through the hard part</p>
+            <h1 id="welcome-title" className="welcome-title">Make sense of the bug. Move on with your day.</h1>
+            <p className="welcome-lead">Bring the code that has you stuck. Work through the issue, understand the fix, and get back to building.</p>
+            <button className="welcome-cta" onClick={() => setShowWelcome(false)}>
+              Open workspace
+              <ArrowRight className="w-4 h-4" />
+            </button>
+            <p className="welcome-note"><Code2 className="w-4 h-4" /> A Java sample is ready to explore</p>
+
+            <div className="welcome-facts" aria-label="Workspace details">
+              <div><strong>06</strong><span>languages</span></div>
+              <div><strong>03</strong><span>focused panels</span></div>
+              <div><strong>01</strong><span>clear next step</span></div>
+            </div>
+          </section>
+
+          <section className="welcome-preview" aria-label="Preview of the debugging workspace">
+            <div className="welcome-preview-bar">
+              <div className="welcome-window-dots" aria-hidden="true"><span /><span /><span /></div>
+              <span className="welcome-file-name">BuggyCalculator.java</span>
+              <span className="welcome-language">JAVA</span>
+            </div>
+            <div className="welcome-code">
+              <div><span className="welcome-line-number">08</span><code>System.out.print(<span className="welcome-code-string">&quot;Enter operator:&quot;</span>);</code></div>
+              <div className="welcome-code-highlight"><span className="welcome-line-number">09</span><code><span className="welcome-code-type">String</span> operator = <span className="welcome-code-null">null</span>;</code></div>
+              <div><span className="welcome-line-number">10</span><code>&nbsp;</code></div>
+              <div><span className="welcome-line-number">11</span><code><span className="welcome-code-keyword">if</span> (operator == <span className="welcome-code-string">&quot;+&quot;</span>) {'{'}</code></div>
+              <div><span className="welcome-line-number">12</span><code>  result = num1 + num2;</code></div>
+              <div><span className="welcome-line-number">13</span><code>{'}'} <span className="welcome-code-keyword">else</span> {'{'}</code></div>
+              <div><span className="welcome-line-number">14</span><code>  result = num1 / <span className="welcome-code-number">0</span>;</code></div>
+            </div>
+            <div className="welcome-preview-footer">
+              <span><span className="welcome-preview-indicator" />Sample file loaded</span>
+              <span>Ready when you are</span>
+            </div>
+          </section>
+        </main>
+
+        <footer className="welcome-footer">
+          <span>DebugCraft Studio</span>
+          <span>Built for thoughtful debugging</span>
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <div className="studio-shell flex flex-col h-screen overflow-hidden">
