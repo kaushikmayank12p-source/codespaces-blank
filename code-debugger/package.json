@@ -1,6 +1,6 @@
 {
   "name": "code-debugger",
-  "version": "0.1.0",
+  "version": "67.69.1",
   "private": true,
   "scripts": {
     "dev": "next dev",

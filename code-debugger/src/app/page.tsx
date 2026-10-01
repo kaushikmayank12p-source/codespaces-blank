@@ -44,6 +44,8 @@ type ApiResponse = {
   error?: string;
 };
 
+const APP_VERSION = 'v67.69.1';
+
 const DEFAULT_JAVA_CODE = `import java.util.Scanner;
 
 public class BuggyCalculator {
@@ -233,6 +235,7 @@ export default function DebugCraftStudio() {
               <p className="brand-name">DebugCraft <span>Studio</span></p>
               <p className="brand-subtitle">Code analysis workspace</p>
             </div>
+            <span className="version-tag">{APP_VERSION}</span>
           </div>
           <span className="welcome-status"><span />Workspace ready</span>
         </header>
@@ -294,7 +297,7 @@ export default function DebugCraftStudio() {
             <h1 className="brand-name">DebugCraft <span>Studio</span></h1>
             <p className="brand-subtitle">Code analysis workspace</p>
           </div>
-          <span className="version-tag">BETA</span>
+          <span className="version-tag">{APP_VERSION}</span>
         </div>
 
         <div className="flex items-center gap-3">
